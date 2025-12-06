@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
 import type { DocumentData } from 'firebase-admin/firestore';
 import { db } from '../services/firebase.js';
+import { DataBaseCollection } from '../datContainers/DataBaseIdentifiers.js';
 
 // Extend Express Request type to include user
 declare global {
@@ -39,20 +40,13 @@ export async function verifyAdmin(req: Request, res: Response, next: NextFunctio
     const uid = decodedToken.uid;
 
     const firestore = db ?? admin.firestore();
-    const collectionsToCheck = ['Users', 'users'];
-
-    let userData: DocumentData | undefined;
-    for (const collectionName of collectionsToCheck) {
-      const snapshot = await firestore.collection(collectionName).doc(uid).get();
-      if (snapshot.exists) {
-        userData = snapshot.data() ?? {};
-        break;
-      }
-    }
+    const snapshot = await firestore.collection(DataBaseCollection.USER).doc(uid).get();
     
-    if (!userData) {
+    if (!snapshot.exists) {
       return res.status(404).json({ error: 'User not found in database' });
     }
+
+    const userData = snapshot.data() ?? {};
 
     const rawRole = typeof userData?.role === 'string'
       ? userData.role

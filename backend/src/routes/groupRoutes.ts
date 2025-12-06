@@ -4,7 +4,7 @@ import { verifyUserToken } from "../services/fireAuth.js";
 import { db } from "../services/firebase.js";
 import { FieldValue } from "firebase-admin/firestore";
 import type { CreateGroupRequest, UpdateGroupRequest } from "../datContainers/groupTypes.js";
-import { DataBaseidentifiers } from "../services/dbUserItems.js";
+import { DataBaseCollection } from "../datContainers/DataBaseIdentifiers.js";
 
 const router = Router();
 
@@ -16,7 +16,7 @@ async function verifyBoardOwnership(boardId: string, userId: string): Promise<bo
     throw new Error("Database not initialized");
   }
 
-  const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+  const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
   const boardDoc = await boardRef.get();
 
   if (!boardDoc.exists) {
@@ -75,7 +75,7 @@ router.post("/:boardId/groups", async (req: Request, res: Response) => {
     }
 
     // Get current max order
-    const groupsRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection("groups");
+    const groupsRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.GROUPS);
     let maxOrder = 0;
     try {
       const snapshot = await groupsRef.orderBy("order", "desc").limit(1).get();
@@ -154,7 +154,7 @@ router.get("/:boardId/groups", async (req: Request, res: Response) => {
     }
 
     // Get all groups
-    const groupsRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection("groups");
+    const groupsRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.GROUPS);
     const snapshot = await groupsRef.orderBy("order", "asc").get();
 
     const groups = snapshot.docs.map((doc: any) => ({
@@ -226,7 +226,7 @@ router.patch("/:boardId/groups/:groupId", async (req: Request, res: Response) =>
     }
 
     // Check if group exists
-    const groupRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection("groups").doc(groupId);
+    const groupRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.GROUPS).doc(groupId);
     const groupDoc = await groupRef.get();
 
     if (!groupDoc.exists) {
@@ -299,7 +299,7 @@ router.delete("/:boardId/groups/:groupId", async (req: Request, res: Response) =
     }
 
     // Check if group exists
-    const groupRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection("groups").doc(groupId);
+    const groupRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.GROUPS).doc(groupId);
     const groupDoc = await groupRef.get();
 
     if (!groupDoc.exists) {
@@ -307,7 +307,7 @@ router.delete("/:boardId/groups/:groupId", async (req: Request, res: Response) =
     }
 
     // Unassign all notes from this group (set groupId to null)
-    const notesRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection("notes");
+    const notesRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.NOTES);
     const notesSnapshot = await notesRef.where("groupId", "==", groupId).get();
 
     const batch = db.batch();
@@ -375,7 +375,7 @@ router.patch("/:boardId/notes/:noteId/group", async (req: Request, res: Response
     }
 
     // Check if note exists
-    const noteRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection("notes").doc(noteId);
+    const noteRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.NOTES).doc(noteId);
     const noteDoc = await noteRef.get();
 
     if (!noteDoc.exists) {
@@ -384,7 +384,7 @@ router.patch("/:boardId/notes/:noteId/group", async (req: Request, res: Response
 
     // If groupId is provided, verify group exists
     if (groupId) {
-      const groupRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection("groups").doc(groupId);
+      const groupRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.GROUPS).doc(groupId);
       const groupDoc = await groupRef.get();
 
       if (!groupDoc.exists) {

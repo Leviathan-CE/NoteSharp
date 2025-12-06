@@ -3,7 +3,8 @@ import { FieldValue } from "firebase-admin/firestore";
 import { Code, DataConnectError } from "firebase/data-connect";
 import { Permision, type Board, type UserPermission } from "../datContainers/dataTypes.js";
 import type { SessionToken } from "../datContainers/sessionToken.js";
-import { DataBaseidentifiers, formatTimestamp } from "./dbUserItems.js";
+import { formatTimestamp } from "./dbUserItems.js";
+import { DataBaseCollection } from "../datContainers/DataBaseIdentifiers.js";
 
 /**
  * Adds a user permission to the database by creating a permission document,
@@ -30,7 +31,7 @@ export async function AdduserPermission(user: SessionToken, permisions: Permisio
     if (permisions === Permision.OWNER)
         throw new Error("Owner can only be-changed using ChangePermssion()");
 
-    const doc = db.collection(DataBaseidentifiers.USER_PERMISSION).doc()
+    const doc = db.collection(DataBaseCollection.USER_PERMISSION).doc()
     const timestampString = formatTimestamp(Date.now().toString());
     const permissionId = doc.id;
 
@@ -43,7 +44,7 @@ export async function AdduserPermission(user: SessionToken, permisions: Permisio
     })
 
     // Add the permission ID to the user's permissionIds array
-    const userDoc = db.collection(DataBaseidentifiers.USER).doc(user.UID);
+    const userDoc = db.collection(DataBaseCollection.USER).doc(user.UID);
     const userDocSnapshot = await userDoc.get();
 
     if (!userDocSnapshot.exists) {
@@ -55,7 +56,7 @@ export async function AdduserPermission(user: SessionToken, permisions: Permisio
     });
 
     //add permissionId to board permissions array
-    const boardDoc = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+    const boardDoc = db.collection(DataBaseCollection.BOARD).doc(boardId);
     const boardSnapshot = await boardDoc.get();
 
     if (!boardSnapshot.exists) {
@@ -97,7 +98,7 @@ export async function ChangePermission(permissionId: string, newPermission: Perm
         throw new DataConnectError(Code.NOT_INITIALIZED, "db not initialized")
 
 
-    const doc = db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId)
+    const doc = db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId)
     const timestampString = formatTimestamp(Date.now().toString());
 
 
@@ -123,7 +124,7 @@ export async function ChangePermission(permissionId: string, newPermission: Perm
             timestamp: permissionData.timeStamp || ''
         };
 
-        const boardDoc = db.collection(DataBaseidentifiers.BOARD).doc(userPermission.boardId);
+        const boardDoc = db.collection(DataBaseCollection.BOARD).doc(userPermission.boardId);
         const boardSnapshot = await boardDoc.get();
 
         const boardData = boardSnapshot.data();
@@ -169,7 +170,7 @@ export async function RemovePermission(permissionId: string): Promise<void> {
     if (db == undefined)
         throw new DataConnectError(Code.NOT_INITIALIZED, "db not initialized")
 
-    const doc = db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId)
+    const doc = db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId)
 
     // Verify the permission document exists and get the userId
     const permissionDoc = await doc.get();
@@ -187,7 +188,7 @@ export async function RemovePermission(permissionId: string): Promise<void> {
     }
 
     // Remove the permission ID from the user's permissionIds array
-    const userDoc = db.collection(DataBaseidentifiers.USER).doc(userId);
+    const userDoc = db.collection(DataBaseCollection.USER).doc(userId);
     const userDocSnapshot = await userDoc.get();
 
     if (!userDocSnapshot.exists) {
@@ -200,7 +201,7 @@ export async function RemovePermission(permissionId: string): Promise<void> {
     });
 
     // remove the permission refernce form the baord permissions array
-    const boardDoc = db.collection(DataBaseidentifiers.BOARD).doc(baordId);
+    const boardDoc = db.collection(DataBaseCollection.BOARD).doc(baordId);
     const boardSnapshot = await boardDoc.get()
 
     if (!boardSnapshot.exists) {
@@ -235,7 +236,7 @@ export async function getPermision(sessionToken: SessionToken, permissionId: str
 
     // If a specific permissionId is provided, fetch that permission directly
     if (permissionId) {
-        const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION)
+        const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION)
             .doc(permissionId)
             .get();
 
@@ -263,7 +264,7 @@ export async function getPermision(sessionToken: SessionToken, permissionId: str
     }
 
     // Get all explicit permissions for the user
-    let query = db.collection(DataBaseidentifiers.USER_PERMISSION)
+    let query = db.collection(DataBaseCollection.USER_PERMISSION)
         .where('userId', '==', sessionToken.UID);
 
     // Apply boardId filter if provided

@@ -1,9 +1,10 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { verifyAdmin } from "../middleware/verifyAdmin.js";
-import { db } from "../services/firebase.js";
+import { verifyAdmin } from "../../middleware/verifyAdmin.js";
+import { db } from "../../services/firebase.js";
+import { DataBaseCollection } from "../../datContainers/DataBaseIdentifiers.js";
 
-const SUPPORT_COLLECTIONS = ["SupportRequests", "supportRequests", "support"];
+const SUPPORT_COLLECTIONS = [DataBaseCollection.SUPPORT_REQUESTS, "supportRequests", "support"];
 
 const router = Router();
 

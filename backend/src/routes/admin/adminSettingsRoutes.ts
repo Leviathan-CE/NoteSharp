@@ -1,8 +1,8 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { FieldValue } from "firebase-admin/firestore";
-import { verifyAdmin } from "../middleware/verifyAdmin.js";
-import { db } from "../services/firebase.js";
+import { verifyAdmin } from "../../middleware/verifyAdmin.js";
+import { db } from "../../services/firebase.js";
 
 const SETTINGS_COLLECTION = "config";
 const SETTINGS_DOC_ID = "adminSettings";

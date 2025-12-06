@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { verifyAdmin } from '../middleware/verifyAdmin.js';
-import { updateUserRole } from '../services/fireAuth.js';
+import { verifyAdmin } from '../../middleware/verifyAdmin.js';
+import { updateUserRole } from '../../services/fireAuth.js';
 
 const router = Router();
 

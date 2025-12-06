@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { verifyAdmin } from "../middleware/verifyAdmin.js";
-import { db } from "../services/firebase.js";
+import { verifyAdmin } from "../../middleware/verifyAdmin.js";
+import { db } from "../../services/firebase.js";
 
 const METRICS_COLLECTION = "systemMetrics";
 const METRICS_DOC_ID = "latest";

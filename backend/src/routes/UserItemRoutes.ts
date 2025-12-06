@@ -6,9 +6,9 @@ import {
     removeItem,
     UpadteBaordItem,
     getItem,
-    getAllItemsFromBoard,
-    DataBaseidentifiers
+    getAllItemsFromBoard
 } from "../services/dbUserItems.js";
+import { DataBaseCollection } from "../datContainers/DataBaseIdentifiers.js";
 import admin from "firebase-admin";
 import type { SessionToken } from "../datContainers/sessionToken.js";
 import type { Item, Board } from "../datContainers/dataTypes.js";
@@ -118,7 +118,7 @@ router.post("/add-item", async (req, res) => {
             // Get the boardId from the item reference we just created
             try {
                 const firestoreDb = admin.firestore();
-                const itemRef = firestoreDb.collection(DataBaseidentifiers.BOARD).doc(parent.id).collection(DataBaseidentifiers.ITEMS).doc(itemId);
+                const itemRef = firestoreDb.collection(DataBaseCollection.BOARD).doc(parent.id).collection(DataBaseCollection.ITEMS).doc(itemId);
                 const itemDoc = await itemRef.get();
                 if (itemDoc.exists) {
                     const itemData = itemDoc.data();

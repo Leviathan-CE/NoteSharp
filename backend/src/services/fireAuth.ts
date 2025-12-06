@@ -4,8 +4,7 @@ import type { DocumentData } from 'firebase-admin/firestore';
 import { type SessionCreateAccountToken, type SessionToken } from '../datContainers/sessionToken.js';
 import { db } from './firebase.js';
 import { addedUser } from './dbUserItems.js';
-
-const USERS_COLLECTION = 'Users';
+import { DataBaseCollection } from '../datContainers/DataBaseIdentifiers.js';
 
 type UserMetadata = {
   role?: string;
@@ -24,20 +23,13 @@ async function fetchUserMetadata(uid: string): Promise<UserMetadata> {
 
   try {
     const firestore = db;
-    const collectionsToCheck = [USERS_COLLECTION, USERS_COLLECTION.toLowerCase()];
-    let userData: DocumentData | undefined;
-
-    for (const collectionName of collectionsToCheck) {
-      const userDoc = await firestore.collection(collectionName).doc(uid).get();
-      if (userDoc.exists) {
-        userData = userDoc.data() ?? {};
-        break;
-      }
-    }
-
-    if (!userData) {
+    const userDoc = await firestore.collection(DataBaseCollection.USER).doc(uid).get();
+    
+    if (!userDoc.exists) {
       return {};
     }
+
+    const userData = userDoc.data() ?? {};
 
     const metadata: UserMetadata = {};
     const rawRole = typeof userData.role === 'string'
@@ -96,12 +88,8 @@ async function upsertUserMetadata(params: {
       updatePayload.IsAdmin = isAdmin;
     }
 
-    const collectionNames = [USERS_COLLECTION, USERS_COLLECTION.toLowerCase()];
-    await Promise.all(
-      collectionNames.map((collectionName) =>
-        firestore.collection(collectionName).doc(uid).set(updatePayload, { merge: true })
-      )
-    );
+    // Only write to the capitalized 'Users' collection
+    await firestore.collection(DataBaseCollection.USER).doc(uid).set(updatePayload, { merge: true });
   } catch (err) {
     console.warn('Failed to upsert user metadata in Firestore:', err);
   }
@@ -155,8 +143,8 @@ export async function createAccount(token: SessionCreateAccountToken): Promise<S
       isAdmin
     };
     
-    // Add user to Firestore database
-    await addedUser(sessionToken, false, true);
+    // Add user to Firestore database (pass the correct isAdmin value)
+    await addedUser(sessionToken, isAdmin, true);
     
     // Return session token
     return sessionToken;

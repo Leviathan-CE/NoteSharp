@@ -1,12 +1,11 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { FieldValue } from "firebase-admin/firestore";
-import { verifyAdmin } from "../middleware/verifyAdmin.js";
-import { db } from "../services/firebase.js";
+import { verifyAdmin } from "../../middleware/verifyAdmin.js";
+import { db } from "../../services/firebase.js";
+import { DataBaseCollection } from "../../datContainers/DataBaseIdentifiers.js";
 
-const CONFIG_COLLECTION = "config";
 const CONFIG_DOC_ID = "server";
-const USER_COLLECTION_PREFERENCES = ["Users", "users"];
 
 const router = Router();
 
@@ -50,14 +49,7 @@ async function getTotalUserCount(): Promise<number> {
     return 0;
   }
 
-  for (const name of USER_COLLECTION_PREFERENCES) {
-    const count = await countCollectionDocuments(name);
-    if (count > 0) {
-      return count;
-    }
-  }
-
-  return 0;
+  return await countCollectionDocuments(DataBaseCollection.USER);
 }
 
 router.get("/server-config", verifyAdmin, async (_req: Request, res: Response) => {
@@ -66,7 +58,7 @@ router.get("/server-config", verifyAdmin, async (_req: Request, res: Response) =
   }
 
   try {
-    const docRef = db.collection(CONFIG_COLLECTION).doc(CONFIG_DOC_ID);
+    const docRef = db.collection(DataBaseCollection.CONFIG).doc(CONFIG_DOC_ID);
     const snapshot = await docRef.get();
     const data = snapshot.data() ?? {};
     const activeUsers = await getTotalUserCount();
@@ -103,7 +95,7 @@ router.put("/server-config", verifyAdmin, async (req: Request, res: Response) =>
     }
 
     const { updatedAt: _ignored, lastUpdated: _ignoredLegacy, ...rest } = payload as Record<string, unknown>;
-    const docRef = db.collection(CONFIG_COLLECTION).doc(CONFIG_DOC_ID);
+    const docRef = db.collection(DataBaseCollection.CONFIG).doc(CONFIG_DOC_ID);
 
     await docRef.set(
       {
@@ -127,7 +119,7 @@ router.post("/server-config/test", verifyAdmin, async (_req: Request, res: Respo
   }
 
   try {
-    const docRef = db.collection(CONFIG_COLLECTION).doc(CONFIG_DOC_ID);
+    const docRef = db.collection(DataBaseCollection.CONFIG).doc(CONFIG_DOC_ID);
     await docRef.get();
 
     return res.status(200).json({

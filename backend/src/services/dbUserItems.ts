@@ -7,15 +7,11 @@ import type { Item, Board, UserPermission } from "../datContainers/dataTypes.js"
 import { ContentType, Permision } from '../datContainers/dataTypes.js';
 import type { SessionToken } from '../datContainers/sessionToken.js';
 import { RemovePermission } from "./dbPermissions.js"
+import { DataBaseCollection } from "../datContainers/DataBaseIdentifiers.js"
 
 
 
-export enum DataBaseidentifiers {
-    USER = "Users",
-    BOARD = "Boards",
-    ITEMS = "Items",
-    USER_PERMISSION = "UserPermission"
-}
+
 
 export function formatTimestamp(timestampString: string) {
     const date = new Date(Number(timestampString));
@@ -41,14 +37,14 @@ export async function createDefaultRootBoard(sessionToken: SessionToken, cursorP
         throw new DataConnectError(Code.NOT_INITIALIZED, "db not initialized")
 
     // First, check if the user document has a rootBoardId field
-    const userRef = db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID);
+    const userRef = db.collection(DataBaseCollection.USER).doc(sessionToken.UID);
     const userDoc = await userRef.get();
     
     if (userDoc.exists) {
         const userData = userDoc.data();
         if (userData?.rootBoardId) {
             // Verify the root board exists and belongs to this user
-            const rootBoardRef = db.collection(DataBaseidentifiers.BOARD).doc(userData.rootBoardId);
+            const rootBoardRef = db.collection(DataBaseCollection.BOARD).doc(userData.rootBoardId);
             const rootBoardDoc = await rootBoardRef.get();
             
             if (rootBoardDoc.exists) {
@@ -62,7 +58,7 @@ export async function createDefaultRootBoard(sessionToken: SessionToken, cursorP
     }
 
     // If no rootBoardId in user document, check if user already has a root board
-    const boardsRef = db.collection(DataBaseidentifiers.BOARD);
+    const boardsRef = db.collection(DataBaseCollection.BOARD);
     const existingBoards = await boardsRef
         .where('owner', '==', sessionToken.UID)
         .where('isRoot', '==', true)
@@ -79,7 +75,7 @@ export async function createDefaultRootBoard(sessionToken: SessionToken, cursorP
     }
 
     // Create a new root board
-    const document: DocumentReference = db.collection(DataBaseidentifiers.BOARD).doc();
+    const document: DocumentReference = db.collection(DataBaseCollection.BOARD).doc();
 
     await document.set({
         id: document.id,
@@ -108,32 +104,36 @@ export async function addedUser(user: SessionToken, isAdmin: boolean, createDefa
     if (db == undefined)
         throw new DataConnectError(Code.NOT_INITIALIZED, "db not initialized")
 
-    let document: DocumentReference = db?.collection(DataBaseidentifiers.USER).doc(user.UID)
+    let document: DocumentReference = db?.collection(DataBaseCollection.USER).doc(user.UID)
 
+
+    // Determine role from isAdmin flag or user.role
+    const userRole = user.role || (isAdmin ? 'admin' : 'user');
+    const normalizedRole = userRole.toLowerCase();
+    const finalIsAdmin = isAdmin || normalizedRole === 'admin';
+
+    // Prepare user document data with all required fields for admin detection
+    const userData: Record<string, any> = {
+        UID: user.UID,
+        uid: user.UID,
+        email: user.email,
+        Email: user.email,
+        displayName: user.displayName,
+        DisplayName: user.displayName,
+        role: normalizedRole,
+        Role: normalizedRole,
+        isAdmin: finalIsAdmin,
+        IsAdmin: finalIsAdmin,
+        permissionIds: []
+    };
 
     // Optionally create a default root board for the user
     if (createDefaultBoard) {
         let rootboard = await createDefaultRootBoard(user);
-
-
-        await document.set({
-            rootBoardId: rootboard,
-            isAdmin: isAdmin,
-            uid: user.UID,
-            displayName: user.displayName,
-            email: user.email,
-            permissionIds: []
-        })
+        userData.rootBoardId = rootboard;
     }
-    else {
-        await document.set({
-            isAdmin: isAdmin,
-            uid: user.UID,
-            displayName: user.displayName,
-            email: user.email,
-            permissionIds: []
-        })
-    }
+
+    await document.set(userData, { merge: true });
 
 }
 
@@ -170,7 +170,7 @@ export async function addItem(item: Item, SessionToken: SessionToken, parent: Bo
         // 2. An item reference in parent's items subcollection (so they show up when getting all items)
         
         // Create the board document first
-        const boardDocRef = db.collection(DataBaseidentifiers.BOARD).doc();
+        const boardDocRef = db.collection(DataBaseCollection.BOARD).doc();
         const boardDocId = boardDocRef.id;
         
         await boardDocRef.set({
@@ -186,9 +186,9 @@ export async function addItem(item: Item, SessionToken: SessionToken, parent: Bo
         console.log('Created child board document:', boardDocId, 'for parent:', parent.id);
         
         // Then create the item reference in parent's items subcollection
-        const itemRef = db.collection(DataBaseidentifiers.BOARD)
+        const itemRef = db.collection(DataBaseCollection.BOARD)
             .doc(parent.id)
-            .collection(DataBaseidentifiers.ITEMS)
+            .collection(DataBaseCollection.ITEMS)
             .doc();
         
         await itemRef.set({
@@ -207,9 +207,9 @@ export async function addItem(item: Item, SessionToken: SessionToken, parent: Bo
         // Non-BOARD items are stored only in the items subcollection
         console.log('Adding non-BOARD item to parent board:', parent.id);
         
-        let document: DocumentReference = db.collection(DataBaseidentifiers.BOARD)
+        let document: DocumentReference = db.collection(DataBaseCollection.BOARD)
             .doc(parent.id)
-            .collection(DataBaseidentifiers.ITEMS)
+            .collection(DataBaseCollection.ITEMS)
             .doc();
 
         await document.set({
@@ -265,9 +265,9 @@ export async function removeItem(item: Item, sessionToken: SessionToken, parent?
 
     // All items (including child boards) are stored in the items subcollection
     // Only root boards are in the Boards collection
-    const itemRef = db.collection(DataBaseidentifiers.BOARD)
+    const itemRef = db.collection(DataBaseCollection.BOARD)
         .doc(parent.id)
-        .collection(DataBaseidentifiers.ITEMS)
+        .collection(DataBaseCollection.ITEMS)
         .doc(item.id);
 
     const itemDoc = await itemRef.get();
@@ -287,13 +287,13 @@ export async function removeItem(item: Item, sessionToken: SessionToken, parent?
         const boardId = itemData.boardId || item.id;
         
         // Check if there's a board document for this child board
-        const childBoardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+        const childBoardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
         const childBoardDoc = await childBoardRef.get();
         
         if (childBoardDoc.exists) {
             // This child board has its own board document (for storing its items)
             // Delete all items in the child board's subcollection first
-            const childBoardItemsRef = childBoardRef.collection(DataBaseidentifiers.ITEMS);
+            const childBoardItemsRef = childBoardRef.collection(DataBaseCollection.ITEMS);
             const childItemsSnapshot = await childBoardItemsRef.get();
             
             const deletePromises = childItemsSnapshot.docs.map(doc => doc.ref.delete());
@@ -331,7 +331,7 @@ export async function UpadteBaordItem(boardId: string, sessionToken: SessionToke
         throw new DataConnectError(Code.NOT_INITIALIZED, "db not initialized");
 
     // Get the board document
-    const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+    const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
     const boardDoc = await boardRef.get();
 
     if (!boardDoc.exists) {
@@ -353,7 +353,7 @@ export async function UpadteBaordItem(boardId: string, sessionToken: SessionToke
 
         // Check each permission to see if user has EDIT or OWNER
         for (const permissionId of permissions) {
-            const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION)
+            const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION)
                 .doc(permissionId)
                 .get();
 
@@ -376,7 +376,7 @@ export async function UpadteBaordItem(boardId: string, sessionToken: SessionToke
     }
 
     // Get the item document
-    const itemRef = boardRef.collection(DataBaseidentifiers.ITEMS).doc(itemId);
+    const itemRef = boardRef.collection(DataBaseCollection.ITEMS).doc(itemId);
     const itemDoc = await itemRef.get();
 
     if (!itemDoc.exists) {
@@ -429,7 +429,7 @@ export async function getItem(sessionToken: SessionToken, itemId: string, conten
 
     // Handle BOARD items
     if (contentType === ContentType.BOARD) {
-        const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(itemId);
+        const boardRef = db.collection(DataBaseCollection.BOARD).doc(itemId);
         const boardDoc = await boardRef.get();
 
         if (!boardDoc.exists) {
@@ -450,7 +450,7 @@ export async function getItem(sessionToken: SessionToken, itemId: string, conten
 
             // Check each permission to see if user has VIEW, EDIT, or OWNER
             for (const permissionId of permissions) {
-                const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION)
+                const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION)
                     .doc(permissionId)
                     .get();
 
@@ -472,7 +472,7 @@ export async function getItem(sessionToken: SessionToken, itemId: string, conten
         }
 
         // Fetch all items from the board's ITEMS subcollection
-        const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+        const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
         const itemsSnapshot = await itemsRef.get();
         const items: Item[] = [];
 
@@ -510,7 +510,7 @@ export async function getItem(sessionToken: SessionToken, itemId: string, conten
         }
 
         // Get the parent board to check authorization
-        const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(itemParentId);
+        const boardRef = db.collection(DataBaseCollection.BOARD).doc(itemParentId);
         const boardDoc = await boardRef.get();
 
         if (!boardDoc.exists) {
@@ -531,7 +531,7 @@ export async function getItem(sessionToken: SessionToken, itemId: string, conten
 
             // Check each permission to see if user has VIEW, EDIT, or OWNER
             for (const permissionId of permissions) {
-                const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION)
+                const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION)
                     .doc(permissionId)
                     .get();
 
@@ -553,7 +553,7 @@ export async function getItem(sessionToken: SessionToken, itemId: string, conten
         }
 
         // Fetch the item directly from the parent board's ITEMS subcollection
-        const itemDoc = await boardRef.collection(DataBaseidentifiers.ITEMS).doc(itemId).get();
+        const itemDoc = await boardRef.collection(DataBaseCollection.ITEMS).doc(itemId).get();
 
         if (!itemDoc.exists) {
             throw new Error("Item not found");
@@ -599,7 +599,7 @@ export async function getAllItemsFromBoard(boardId: string, sessionToken: Sessio
         throw new DataConnectError(Code.NOT_INITIALIZED, "db not initialized");
 
     // Get the board document
-    const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+    const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
     const boardDoc = await boardRef.get();
 
     if (!boardDoc.exists) {
@@ -626,7 +626,7 @@ export async function getAllItemsFromBoard(boardId: string, sessionToken: Sessio
         
         // Check each permission to see if user has VIEW, EDIT, or OWNER
         for (const permissionId of permissions) {
-            const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION)
+            const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION)
                 .doc(permissionId)
                 .get();
             
@@ -648,7 +648,7 @@ export async function getAllItemsFromBoard(boardId: string, sessionToken: Sessio
     }
 
     // Fetch all items from the board's ITEMS subcollection
-    const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+    const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
     const itemsSnapshot = await itemsRef.get();
     const items: Item[] = [];
 

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { createAccount, loginUser, logoutUser, verifyUserToken } from "../services/fireAuth.js";
-import { type SessionCreateAccountToken, type SessionToken } from "../datContainers/sessionToken.js";
+import { createAccount, loginUser, logoutUser, verifyUserToken } from "../../services/fireAuth.js";
+import { type SessionCreateAccountToken, type SessionToken } from "../../datContainers/sessionToken.js";
 // Using real Firebase authentication
 // Temporary: Using mock auth for development
 // import { createMockAccount, loginMockUser, logoutMockUser, verifyMockToken } from "../services/mockAuth.js";

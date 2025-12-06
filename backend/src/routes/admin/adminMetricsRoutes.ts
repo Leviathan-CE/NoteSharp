@@ -1,9 +1,9 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { verifyAdmin } from "../middleware/verifyAdmin.js";
-import { db } from "../services/firebase.js";
+import { verifyAdmin } from "../../middleware/verifyAdmin.js";
+import { db } from "../../services/firebase.js";
+import { DataBaseCollection } from "../../datContainers/DataBaseIdentifiers.js";
 
-const USER_COLLECTIONS = ["Users", "users"];
 const SUPPORT_COLLECTIONS = ["SupportRequests", "supportRequests", "support"];
 
 const router = Router();
@@ -20,21 +20,8 @@ async function countDocs(collectionName: string): Promise<number> {
 }
 
 async function getUserCounts() {
-  let primaryCount = 0;
-  let secondaryCount = 0;
+  const total = await countDocs(DataBaseCollection.USER);
 
-  for (const name of USER_COLLECTIONS) {
-    const count = await countDocs(name);
-    if (count > 0) {
-      if (primaryCount === 0) {
-        primaryCount = count;
-      } else {
-        secondaryCount = count;
-      }
-    }
-  }
-
-  const total = primaryCount || secondaryCount;
   return {
     totalUsers: total,
     adminUsers: Math.max(1, Math.floor(total * 0.4)),

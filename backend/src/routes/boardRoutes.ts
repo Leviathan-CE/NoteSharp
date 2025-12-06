@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { verifyUserToken } from "../services/fireAuth.js";
 import { db } from "../services/firebase.js";
 import { FieldValue } from "firebase-admin/firestore";
+import { DataBaseCollection } from "../datContainers/DataBaseIdentifiers.js";
 
 const router = Router();
 
@@ -58,7 +59,7 @@ router.post("/", async (req: Request, res: Response) => {
       createdAt: FieldValue.serverTimestamp()
     };
 
-    const boardRef = await db.collection("boards").add(boardData);
+    const boardRef = await db.collection(DataBaseCollection.BOARD).add(boardData);
 
     // Return the created board ID
     res.status(201).json({ 

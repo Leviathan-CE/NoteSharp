@@ -2,10 +2,9 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { FieldValue } from "firebase-admin/firestore";
 import admin from "firebase-admin";
-import { verifyAdmin } from "../middleware/verifyAdmin.js";
-import { db } from "../services/firebase.js";
-
-const USER_COLLECTIONS = ["Users", "users"];
+import { verifyAdmin } from "../../middleware/verifyAdmin.js";
+import { db } from "../../services/firebase.js";
+import { DataBaseCollection } from "../../datContainers/DataBaseIdentifiers.js";
 
 type RawUserData = Record<string, any>;
 
@@ -56,13 +55,11 @@ router.get("/users", verifyAdmin, async (_req: Request, res: Response) => {
   try {
     const userMap = new Map<string, ReturnType<typeof normalizeUserRecord>>();
 
-    for (const collectionName of USER_COLLECTIONS) {
-      const snapshot = await db.collection(collectionName).get();
-      snapshot.forEach((doc) => {
-        const normalized = normalizeUserRecord(doc.id, doc.data() as RawUserData);
-        userMap.set(normalized.uid, normalized);
-      });
-    }
+    const snapshot = await db.collection(DataBaseCollection.USER).get();
+    snapshot.forEach((doc) => {
+      const normalized = normalizeUserRecord(doc.id, doc.data() as RawUserData);
+      userMap.set(normalized.uid, normalized);
+    });
 
     return res.status(200).json({
       users: Array.from(userMap.values()),
@@ -102,11 +99,8 @@ router.patch("/users/:userId/role", verifyAdmin, async (req: Request, res: Respo
       updatedAt: FieldValue.serverTimestamp(),
     };
 
-    await Promise.all(
-      USER_COLLECTIONS.map((collectionName) =>
-        db!.collection(collectionName).doc(userId).set(updates, { merge: true })
-      )
-    );
+    // Only write to the capitalized 'Users' collection
+    await db!.collection(DataBaseCollection.USER).doc(userId).set(updates, { merge: true });
 
     if (admin.apps.length > 0) {
       try {
@@ -140,9 +134,8 @@ router.delete("/users/:userId", verifyAdmin, async (req: Request, res: Response)
   }
 
   try {
-    await Promise.all(
-      USER_COLLECTIONS.map((collectionName) => db!.collection(collectionName).doc(userId).delete().catch(() => {}))
-    );
+    // Delete from Users collection
+    await db!.collection(DataBaseCollection.USER).doc(userId).delete().catch(() => {});
 
     if (admin.apps.length > 0) {
       try {

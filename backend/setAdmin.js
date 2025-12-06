@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
-
+import {DataBaseCollection} from '../backend/src/datContainers/DataBaseIdentifiers'
 dotenv.config();
 
 // Initialize Firebase Admin
@@ -21,10 +21,12 @@ async function setUserAsAdmin() {
     console.log('Found user:', userRecord.uid, userRecord.email);
 
     // Update or create user document in Firestore
-    await db.collection('users').doc(userRecord.uid).set({
+    await db.collection(DataBaseCollection.USER).doc(userRecord.uid).set({
       email: userRecord.email,
-      UID: userRecord.uid,
+      uid: userRecord.uid,
       role: 'admin',
+      isAdmin: true,
+      displayName: userRecord.displayName || userRecord.email?.split('@')[0] || 'Admin User',
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
