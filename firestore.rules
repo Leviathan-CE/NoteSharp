@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isBoardOwner(boardId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/boards/$(boardId)).data.ownerId == request.auth.uid;
+    }
+    
+    // Users can only read/write their own user document (if document ID = UID)
+    match /Users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Boards collection - users can only access boards they own
+    match /boards/{boardId} {
+      // Read: check existing document's ownerId field
+      allow read: if isAuthenticated() && 
+        resource.data.ownerId == request.auth.uid;
+      
+      // Create: check that the new document's ownerId field matches auth UID
+      allow create: if isAuthenticated() && 
+        request.resource.data.ownerId == request.auth.uid;
+      
+      // Update/Delete: check existing document's ownerId field
+      allow update, delete: if isAuthenticated() && 
+        resource.data.ownerId == request.auth.uid;
+      
+      // Groups subcollection - only board owner can access
+      match /groups/{groupId} {
+        // Read: user must be board owner
+        allow read: if isBoardOwner(boardId);
+        
+        // Create: user must be board owner and set correct ownerId
+        allow create: if isBoardOwner(boardId) && 
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.boardId == boardId;
+        
+        // Update: user must be board owner, cannot change ownerId or boardId
+        allow update: if isBoardOwner(boardId) &&
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.boardId == resource.data.boardId;
+        
+        // Delete: user must be board owner
+        allow delete: if isBoardOwner(boardId);
+      }
+      
+      // Notes subcollection - only board owner can access
+      match /notes/{noteId} {
+        // Read: user must be board owner
+        allow read: if isBoardOwner(boardId);
+        
+        // Create: user must be board owner and set correct ownerId and boardId
+        allow create: if isBoardOwner(boardId) &&
+          request.resource.data.ownerId == request.auth.uid &&
+          request.resource.data.boardId == boardId;
+        
+        // Update: user must be board owner, cannot change ownerId or boardId
+        // groupId field can be null or reference a valid group
+        allow update: if isBoardOwner(boardId) &&
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.boardId == resource.data.boardId &&
+          (
+            !request.resource.data.keys().hasAny(['groupId']) ||
+            request.resource.data.groupId == null ||
+            exists(/databases/$(database)/documents/boards/$(boardId)/groups/$(request.resource.data.groupId))
+          );
+        
+        // Delete: user must be board owner
+        allow delete: if isBoardOwner(boardId);
+      }
+    }
+    
+    // Legacy notes collection (if you have one at root level)
+    match /notes/{noteId} {
+      allow read, write: if isAuthenticated() && 
+        resource.data.ownerId == request.auth.uid;
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.ownerId == request.auth.uid;
+    }
+  }
+}

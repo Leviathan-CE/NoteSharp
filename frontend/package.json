@@ -1,0 +1,81 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@types/jest": "^27.5.2",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "firebase": "^10.7.1",
+    "hast-util-sanitize": "^5.0.2",
+    "katex": "^0.16.9",
+    "lucide-react": "^0.552.0",
+    "react": "^18.2.0",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^9.1.0",
+    "react-router-dom": "^6.14.2",
+    "rehype-highlight": "^7.0.2",
+    "rehype-katex": "^7.0.1",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "dev": "vite --host",
+    "start": "vite --host",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.27.1",
+    "@babel/preset-env": "^7.28.5",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.18.12",
+    "@vitejs/plugin-react": "^5.1.0",
+    "autoprefixer": "^10.4.21",
+    "babel-jest": "^30.2.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "jsdom": "^27.0.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.0.3"
+  },
+  "description": "This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).",
+  "main": "postcss.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
