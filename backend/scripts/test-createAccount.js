@@ -1,6 +1,6 @@
-import { createAccount } from './dist/routes/fireAuthRoutes.js';
+import { createAccount } from '../dist/routes/fireAuthRoutes.js';
 // Import Firebase initialization
-import './dist/services/firebase.js';
+import '../dist/services/firebase.js';
 
 async function testCreateAccount() {
   try {

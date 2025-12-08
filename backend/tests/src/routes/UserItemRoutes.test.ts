@@ -7,9 +7,9 @@ import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import { 
   addItem,
-    createDefaultRootBoard,
-    DataBaseidentifiers 
+  createDefaultRootBoard
 } from '../../../src/services/dbUserItems.js';
+import { DataBaseCollection } from '../../../src/datContainers/DataBaseIdentifiers.js';
 import { AdduserPermission } from '../../../src/services/dbPermissions.js';
 import type { User } from 'firebase/auth';
 import type { SessionToken } from '../../../src/datContainers/sessionToken.js';
@@ -180,7 +180,7 @@ async function createTestUser(email: string): Promise<{ userRecord: admin.auth.U
 
   // Add user to Firestore
   const db = admin.firestore();
-  await db.collection(DataBaseidentifiers.USER).doc(userRecord.uid).set({
+  await db.collection(DataBaseCollection.USER).doc(userRecord.uid).set({
     isAdmin: false,
     uid: userRecord.uid
   });
@@ -228,7 +228,7 @@ describe('UserItem Routes Integration Tests', () => {
     // Delete permission documents
     for (const permissionId of createdPermissionIds) {
       try {
-        await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).delete();
+        await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).delete();
       } catch (error) {
         // Document might not exist, ignore
       }
@@ -239,8 +239,8 @@ describe('UserItem Routes Integration Tests', () => {
     for (const boardId of createdBoardIds) {
       if (boardId !== testBoardId) {
         try {
-          const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
-          const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+          const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
+          const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
           const itemsSnapshot = await itemsRef.get();
           
           // Delete all items in the board
@@ -256,8 +256,8 @@ describe('UserItem Routes Integration Tests', () => {
 
     // Clean up items in testBoardId (but keep the board itself)
     try {
-      const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(testBoardId);
-      const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+      const boardRef = db.collection(DataBaseCollection.BOARD).doc(testBoardId);
+      const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
       const itemsSnapshot = await itemsRef.get();
       
       const deletePromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
@@ -278,7 +278,7 @@ describe('UserItem Routes Integration Tests', () => {
     // 1. Clean up all permissions (including any that might have been missed)
     for (const permissionId of createdPermissionIds) {
       try {
-        await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).delete();
+        await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).delete();
       } catch (error) {
         // Permission might not exist, ignore
       }
@@ -287,13 +287,13 @@ describe('UserItem Routes Integration Tests', () => {
     // Safety cleanup: Remove any permissions associated with test boards
     for (const boardId of createdBoardIds) {
       try {
-        const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+        const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
         if (boardDoc.exists) {
           const boardData = boardDoc.data();
           const permissions = boardData?.permissions || [];
           for (const permissionId of permissions) {
             try {
-              await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).delete();
+              await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).delete();
             } catch (error) {
               // Permission might not exist, ignore
             }
@@ -307,10 +307,10 @@ describe('UserItem Routes Integration Tests', () => {
     // 2. Clean up all boards and their items
     for (const boardId of createdBoardIds) {
       try {
-        const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+        const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
         
         // Delete all items in the board's ITEMS subcollection
-        const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+        const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
         const itemsSnapshot = await itemsRef.get();
         const deleteItemPromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
         await Promise.all(deleteItemPromises);
@@ -325,7 +325,7 @@ describe('UserItem Routes Integration Tests', () => {
     // Safety cleanup: Remove any remaining boards owned by test users
     for (const userId of createdUserIds) {
       try {
-        const boardsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+        const boardsSnapshot = await db.collection(DataBaseCollection.BOARD)
           .where('owner', '==', userId)
           .get();
         
@@ -333,7 +333,7 @@ describe('UserItem Routes Integration Tests', () => {
           try {
             const boardRef = boardDoc.ref;
             // Delete all items in the board
-            const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+            const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
             const itemsSnapshot = await itemsRef.get();
             const deleteItemPromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
             await Promise.all(deleteItemPromises);
@@ -353,7 +353,7 @@ describe('UserItem Routes Integration Tests', () => {
     for (const userId of createdUserIds) {
       try {
         // Delete user document from Firestore
-        await db.collection(DataBaseidentifiers.USER).doc(userId).delete();
+        await db.collection(DataBaseCollection.USER).doc(userId).delete();
         
         // Delete user from Firebase Auth
         await admin.auth().deleteUser(userId);
@@ -365,7 +365,7 @@ describe('UserItem Routes Integration Tests', () => {
     // Safety cleanup: Remove any remaining permissions for test users
     for (const userId of createdUserIds) {
       try {
-        const permissionsSnapshot = await db.collection(DataBaseidentifiers.USER_PERMISSION)
+        const permissionsSnapshot = await db.collection(DataBaseCollection.USER_PERMISSION)
           .where('userId', '==', userId)
           .get();
         
@@ -502,7 +502,7 @@ describe('UserItem Routes Integration Tests', () => {
       }
 
       const db = admin.firestore();
-      const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(testBoardId).get();
+      const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(testBoardId).get();
       const boardData = boardDoc.data();
 
       const parentBoard: Board = {
@@ -544,7 +544,7 @@ describe('UserItem Routes Integration Tests', () => {
       }
 
       const db = admin.firestore();
-      const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(testBoardId).get();
+      const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(testBoardId).get();
       const boardData = boardDoc.data();
 
       const parentBoard: Board = {
@@ -630,7 +630,7 @@ describe('UserItem Routes Integration Tests', () => {
 
       // Create a test item to remove
       const db = admin.firestore();
-      const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(testBoardId).get();
+      const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(testBoardId).get();
       const boardData = boardDoc.data();
 
       const parentBoard: Board = {
@@ -659,9 +659,9 @@ describe('UserItem Routes Integration Tests', () => {
       await addItem(textItem, ownerSessionToken, parentBoard, [10, 10]);
 
       // Find the created item
-      const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+      const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
         .doc(testBoardId)
-        .collection(DataBaseidentifiers.ITEMS)
+        .collection(DataBaseCollection.ITEMS)
         .get();
 
       if (itemsSnapshot.size > 0) {
@@ -676,7 +676,7 @@ describe('UserItem Routes Integration Tests', () => {
       }
 
       const db = admin.firestore();
-      const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(testBoardId).get();
+      const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(testBoardId).get();
       const boardData = boardDoc.data();
 
       const parentBoard: Board = {
@@ -710,9 +710,9 @@ describe('UserItem Routes Integration Tests', () => {
       expect(response.body.message).toBe('Item removed successfully');
 
       // Verify deletion
-      const itemDoc = await db.collection(DataBaseidentifiers.BOARD)
+      const itemDoc = await db.collection(DataBaseCollection.BOARD)
         .doc(testBoardId)
-        .collection(DataBaseidentifiers.ITEMS)
+        .collection(DataBaseCollection.ITEMS)
         .doc(testItemId)
         .get();
 
@@ -771,7 +771,7 @@ describe('UserItem Routes Integration Tests', () => {
 
       // Create a test item to update
       const db = admin.firestore();
-      const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(testBoardId).get();
+      const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(testBoardId).get();
       const boardData = boardDoc.data();
 
       const parentBoard: Board = {
@@ -800,9 +800,9 @@ describe('UserItem Routes Integration Tests', () => {
       await addItem(textItem, ownerSessionToken, parentBoard, [10, 10]);
 
       // Find the created item
-      const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+      const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
         .doc(testBoardId)
-        .collection(DataBaseidentifiers.ITEMS)
+        .collection(DataBaseCollection.ITEMS)
         .get();
 
       if (itemsSnapshot.size > 0) {
@@ -833,9 +833,9 @@ describe('UserItem Routes Integration Tests', () => {
 
       // Verify update
       const db = admin.firestore();
-      const itemDoc = await db.collection(DataBaseidentifiers.BOARD)
+      const itemDoc = await db.collection(DataBaseCollection.BOARD)
         .doc(testBoardId)
-        .collection(DataBaseidentifiers.ITEMS)
+        .collection(DataBaseCollection.ITEMS)
         .doc(testItemId)
         .get();
 
@@ -921,7 +921,7 @@ describe('UserItem Routes Integration Tests', () => {
       // Create a test item to retrieve before each test
       // This ensures the item exists even after afterEach cleanup
       const db = admin.firestore();
-      const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(testBoardId).get();
+      const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(testBoardId).get();
       const boardData = boardDoc.data();
 
       const parentBoard: Board = {
@@ -950,9 +950,9 @@ describe('UserItem Routes Integration Tests', () => {
       await addItem(textItem, ownerSessionToken, parentBoard, [10, 10]);
 
       // Find the created item
-      const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+      const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
         .doc(testBoardId)
-        .collection(DataBaseidentifiers.ITEMS)
+        .collection(DataBaseCollection.ITEMS)
         .get();
 
       if (itemsSnapshot.size > 0) {
@@ -1098,7 +1098,7 @@ describe('UserItem Routes Integration Tests', () => {
 
       // Create test items in the board before each test
       const db = admin.firestore();
-      const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(testBoardId).get();
+      const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(testBoardId).get();
       const boardData = boardDoc.data();
 
       const parentBoard: Board = {
@@ -1155,9 +1155,9 @@ describe('UserItem Routes Integration Tests', () => {
       const db = admin.firestore();
       for (const itemId of testItemIds) {
         try {
-          await db.collection(DataBaseidentifiers.BOARD)
+          await db.collection(DataBaseCollection.BOARD)
             .doc(testBoardId)
-            .collection(DataBaseidentifiers.ITEMS)
+            .collection(DataBaseCollection.ITEMS)
             .doc(itemId)
             .delete();
         } catch (error) {
@@ -1353,7 +1353,7 @@ describe('UserItem Routes Integration Tests', () => {
       // Create a new empty nested board (not using testBoardId which has items from beforeEach)
       // We need to get the parent board first
       const db = admin.firestore();
-      const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(testBoardId).get();
+      const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(testBoardId).get();
       const boardData = boardDoc.data();
 
       const parentBoard: Board = {

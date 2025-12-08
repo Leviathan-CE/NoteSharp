@@ -5,7 +5,8 @@ import cors from 'cors';
 import permissionRoutes from '../../../src/routes/PermissionRoutes.js';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
-import { addedUser, createDefaultRootBoard, DataBaseidentifiers } from '../../../src/services/dbUserItems.js';
+import { addedUser, createDefaultRootBoard } from '../../../src/services/dbUserItems.js';
+import { DataBaseCollection } from '../../../src/datContainers/DataBaseIdentifiers.js';
 import { AdduserPermission } from '../../../src/services/dbPermissions.js';
 import { Permision } from '../../../src/datContainers/dataTypes.js';
 import type { SessionToken } from '../../../src/datContainers/sessionToken.js';
@@ -204,7 +205,7 @@ describe('Permission Routes Integration Tests', () => {
       // Delete permission documents
       for (const permissionId of createdPermissionIds) {
         try {
-          await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).delete();
+          await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).delete();
         } catch (error) {
           // Permission might not exist, ignore
         }
@@ -214,8 +215,8 @@ describe('Permission Routes Integration Tests', () => {
       // Clean up items in test boards (but keep the boards themselves)
       for (const boardId of createdBoardIds) {
         try {
-          const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
-          const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+          const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
+          const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
           const itemsSnapshot = await itemsRef.get();
           
           const deletePromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
@@ -235,7 +236,7 @@ describe('Permission Routes Integration Tests', () => {
       // 1. Clean up all permissions (including any that might have been missed)
       for (const permissionId of createdPermissionIds) {
         try {
-          await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).delete();
+          await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).delete();
         } catch (error) {
           // Permission might not exist, ignore
         }
@@ -244,13 +245,13 @@ describe('Permission Routes Integration Tests', () => {
       // Safety cleanup: Remove any permissions associated with test boards
       for (const boardId of createdBoardIds) {
         try {
-          const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+          const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
           if (boardDoc.exists) {
             const boardData = boardDoc.data();
             const permissions = boardData?.permissions || [];
             for (const permissionId of permissions) {
               try {
-                await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).delete();
+                await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).delete();
               } catch (error) {
                 // Permission might not exist, ignore
               }
@@ -264,10 +265,10 @@ describe('Permission Routes Integration Tests', () => {
       // 2. Clean up all boards and their items
       for (const boardId of createdBoardIds) {
         try {
-          const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+          const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
           
           // Delete all items in the board's ITEMS subcollection
-          const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+          const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
           const itemsSnapshot = await itemsRef.get();
           const deleteItemPromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
           await Promise.all(deleteItemPromises);
@@ -282,7 +283,7 @@ describe('Permission Routes Integration Tests', () => {
       // Safety cleanup: Remove any remaining boards owned by test users
       for (const uid of createdTestUsers) {
         try {
-          const boardsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+          const boardsSnapshot = await db.collection(DataBaseCollection.BOARD)
             .where('owner', '==', uid)
             .get();
           
@@ -290,7 +291,7 @@ describe('Permission Routes Integration Tests', () => {
             try {
               const boardRef = boardDoc.ref;
               // Delete all items in the board
-              const itemsRef = boardRef.collection(DataBaseidentifiers.ITEMS);
+              const itemsRef = boardRef.collection(DataBaseCollection.ITEMS);
               const itemsSnapshot = await itemsRef.get();
               const deleteItemPromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
               await Promise.all(deleteItemPromises);
@@ -310,7 +311,7 @@ describe('Permission Routes Integration Tests', () => {
       for (const uid of createdTestUsers) {
         try {
           // Delete user document from Firestore
-          await db.collection(DataBaseidentifiers.USER).doc(uid).delete();
+          await db.collection(DataBaseCollection.USER).doc(uid).delete();
           
           // Delete user from Firebase Auth
           await admin.auth().deleteUser(uid);
@@ -322,7 +323,7 @@ describe('Permission Routes Integration Tests', () => {
       // Safety cleanup: Remove any remaining permissions for test users
       for (const uid of createdTestUsers) {
         try {
-          const permissionsSnapshot = await db.collection(DataBaseidentifiers.USER_PERMISSION)
+          const permissionsSnapshot = await db.collection(DataBaseCollection.USER_PERMISSION)
             .where('userId', '==', uid)
             .get();
           
@@ -490,7 +491,7 @@ describe('Permission Routes Integration Tests', () => {
 
       // Verify the change in database
       const db = admin.firestore();
-      const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(testPermissionId).get();
+      const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(testPermissionId).get();
       expect(permissionDoc.data()?.permission).toBe(Permision.EDIT);
     });
 
@@ -598,7 +599,7 @@ describe('Permission Routes Integration Tests', () => {
 
       // Verify deletion in database
       const db = admin.firestore();
-      const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(testPermissionId).get();
+      const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(testPermissionId).get();
       expect(permissionDoc.exists).toBe(false);
 
       // Remove from tracking since it's already deleted

@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
-import {DataBaseCollection} from '../backend/src/datContainers/DataBaseIdentifiers'
+import {DataBaseCollection} from '../src/datContainers/DataBaseIdentifiers'
 dotenv.config();
 
 // Initialize Firebase Admin

@@ -7,7 +7,8 @@ import {
     RemovePermission,
     getPermision
 } from '../../../src/services/dbPermissions.js';
-import { addedUser, DataBaseidentifiers } from '../../../src/services/dbUserItems.js';
+import { addedUser } from '../../../src/services/dbUserItems.js';
+import { DataBaseCollection } from '../../../src/datContainers/DataBaseIdentifiers.js';
 import type { User } from 'firebase/auth';
 import type { SessionToken } from '../../../src/datContainers/sessionToken.js';
 import { Permision } from '../../../src/datContainers/dataTypes.js';
@@ -50,7 +51,7 @@ describe('dbPermissions', () => {
 
             // Create a test board for permissions
             const db = admin.firestore();
-            const boardRef = db.collection(DataBaseidentifiers.BOARD).doc();
+            const boardRef = db.collection(DataBaseCollection.BOARD).doc();
             await boardRef.set({
                 id: boardRef.id,
                 owner: userRecord.uid,
@@ -78,7 +79,7 @@ describe('dbPermissions', () => {
         // Delete permission documents
         for (const permissionId of createdPermissionIds) {
             try {
-                await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).delete();
+                await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).delete();
             } catch (error) {
                 // Document might not exist, ignore
             }
@@ -87,9 +88,9 @@ describe('dbPermissions', () => {
         // Clean up user permissionIds arrays
         for (const userId of createdUserIds) {
             try {
-                const userDoc = await db.collection(DataBaseidentifiers.USER).doc(userId).get();
+                const userDoc = await db.collection(DataBaseCollection.USER).doc(userId).get();
                 if (userDoc.exists) {
-                    await db.collection(DataBaseidentifiers.USER).doc(userId).update({
+                    await db.collection(DataBaseCollection.USER).doc(userId).update({
                         permissionIds: admin.firestore.FieldValue.delete()
                     });
                 }
@@ -101,7 +102,7 @@ describe('dbPermissions', () => {
         // Delete user documents
         for (const userId of createdUserIds) {
             try {
-                await db.collection(DataBaseidentifiers.USER).doc(userId).delete();
+                await db.collection(DataBaseCollection.USER).doc(userId).delete();
             } catch (error) {
                 // Document might not exist, ignore
             }
@@ -111,13 +112,13 @@ describe('dbPermissions', () => {
         for (const boardId of createdBoardIds) {
             try {
                 // Delete items subcollection first
-                const itemsRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection(DataBaseidentifiers.ITEMS);
+                const itemsRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.ITEMS);
                 const itemsSnapshot = await itemsRef.get();
                 const deletePromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
                 await Promise.all(deletePromises);
 
                 // Delete the board document
-                await db.collection(DataBaseidentifiers.BOARD).doc(boardId).delete();
+                await db.collection(DataBaseCollection.BOARD).doc(boardId).delete();
             } catch (error) {
                 // Document might not exist, ignore
             }
@@ -161,19 +162,19 @@ describe('dbPermissions', () => {
 
             // Verify permission document exists
             const db = admin.firestore();
-            const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(result.permissionId).get();
+            const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(result.permissionId).get();
             expect(permissionDoc.exists).toBe(true);
             expect(permissionDoc.data()?.userId).toBe(sessionToken.UID);
             expect(permissionDoc.data()?.boardId).toBe(boardId);
             expect(permissionDoc.data()?.permission).toBe(Permision.VIEW);
 
             // Verify permission ID was added to user's permissionIds array
-            const userDoc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            const userDoc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
             const permissionIds = userDoc.data()?.permissionIds || [];
             expect(permissionIds).toContain(result.permissionId);
 
             // Verify permission ID was added to board's permissions array
-            const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
             const boardPermissions = boardDoc.data()?.permissions || [];
             expect(boardPermissions).toContain(result.permissionId);
         });
@@ -199,12 +200,12 @@ describe('dbPermissions', () => {
 
             // Verify permission document exists
             const db = admin.firestore();
-            const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(result.permissionId).get();
+            const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(result.permissionId).get();
             expect(permissionDoc.exists).toBe(true);
             expect(permissionDoc.data()?.permission).toBe(Permision.EDIT);
 
             // Verify permission ID was added to board's permissions array
-            const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
             const boardPermissions = boardDoc.data()?.permissions || [];
             expect(boardPermissions).toContain(result.permissionId);
         });
@@ -223,20 +224,20 @@ describe('dbPermissions', () => {
 
             // Verify both permissions exist
             const db = admin.firestore();
-            const permission1 = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(result1.permissionId).get();
-            const permission2 = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(result2.permissionId).get();
+            const permission1 = await db.collection(DataBaseCollection.USER_PERMISSION).doc(result1.permissionId).get();
+            const permission2 = await db.collection(DataBaseCollection.USER_PERMISSION).doc(result2.permissionId).get();
 
             expect(permission1.exists).toBe(true);
             expect(permission2.exists).toBe(true);
 
             // Verify both permission IDs are in user's permissionIds array
-            const userDoc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            const userDoc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
             const permissionIds = userDoc.data()?.permissionIds || [];
             expect(permissionIds).toContain(result1.permissionId);
             expect(permissionIds).toContain(result2.permissionId);
 
             // Verify both permission IDs are in board's permissions array
-            const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
             const boardPermissions = boardDoc.data()?.permissions || [];
             expect(boardPermissions).toContain(result1.permissionId);
             expect(boardPermissions).toContain(result2.permissionId);
@@ -286,14 +287,14 @@ describe('dbPermissions', () => {
 
             // Verify initial permission is VIEW
             const db = admin.firestore();
-            let permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission.permissionId).get();
+            let permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission.permissionId).get();
             expect(permissionDoc.data()?.permission).toBe(Permision.VIEW);
 
             // Change permission to EDIT
             await ChangePermission(permission.permissionId, Permision.EDIT);
 
             // Verify permission was updated from VIEW to EDIT
-            permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission.permissionId).get();
+            permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission.permissionId).get();
             expect(permissionDoc.data()?.permission).toBe(Permision.EDIT);
             expect(permissionDoc.data()?.timeStamp).toBeDefined();
         });
@@ -313,7 +314,7 @@ describe('dbPermissions', () => {
 
             // Verify permission was updated
             const db = admin.firestore();
-            const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission.permissionId).get();
+            const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission.permissionId).get();
             expect(permissionDoc.data()?.permission).toBe(Permision.VIEW);
         });
 
@@ -356,7 +357,7 @@ describe('dbPermissions', () => {
             const db = admin.firestore();
 
             // Get original owner
-            const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
             const originalOwnerId = boardDoc.data()?.owner;
 
             // Create a permission for the new owner
@@ -367,11 +368,11 @@ describe('dbPermissions', () => {
             await ChangePermission(permission.permissionId, Permision.OWNER);
 
             // Verify board owner was changed to the new owner
-            const updatedBoardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const updatedBoardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
             expect(updatedBoardDoc.data()?.owner).toBe(newOwnerToken.UID);
 
             // Verify the permission document now represents the old owner's permission (EDIT by default)
-            const permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission.permissionId).get();
+            const permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission.permissionId).get();
             expect(permissionDoc.data()?.userId).toBe(originalOwnerId);
             expect(permissionDoc.data()?.permission).toBe(Permision.EDIT);
 
@@ -393,11 +394,11 @@ describe('dbPermissions', () => {
 
             // Verify permission exists before removal
             const db = admin.firestore();
-            let permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).get();
+            let permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).get();
             expect(permissionDoc.exists).toBe(true);
 
             // Verify permission ID is in user's permissionIds array
-            let userDoc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            let userDoc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
             let permissionIds = userDoc.data()?.permissionIds || [];
             expect(permissionIds).toContain(permissionId);
 
@@ -405,16 +406,16 @@ describe('dbPermissions', () => {
             await RemovePermission(permissionId);
 
             // Verify permission document was deleted
-            permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).get();
+            permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).get();
             expect(permissionDoc.exists).toBe(false);
 
             // Verify permission ID was removed from user's permissionIds array
-            userDoc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            userDoc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
             permissionIds = userDoc.data()?.permissionIds || [];
             expect(permissionIds).not.toContain(permissionId);
 
             // Verify permission ID was removed from board's permissions array
-            const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
             const boardPermissions = boardDoc.data()?.permissions || [];
             expect(boardPermissions).not.toContain(permissionId);
         });
@@ -432,7 +433,7 @@ describe('dbPermissions', () => {
             const db = admin.firestore();
 
             // Verify both permissions are in user's array
-            let userDoc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            let userDoc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
             let permissionIds = userDoc.data()?.permissionIds || [];
             expect(permissionIds).toContain(permission1.permissionId);
             expect(permissionIds).toContain(permission2.permissionId);
@@ -441,13 +442,13 @@ describe('dbPermissions', () => {
             await RemovePermission(permission1.permissionId);
 
             // Verify first permission was removed but second remains
-            userDoc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            userDoc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
             permissionIds = userDoc.data()?.permissionIds || [];
             expect(permissionIds).not.toContain(permission1.permissionId);
             expect(permissionIds).toContain(permission2.permissionId);
 
             // Verify board permissions array
-            const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
             const boardPermissions = boardDoc.data()?.permissions || [];
             expect(boardPermissions).not.toContain(permission1.permissionId);
             expect(boardPermissions).toContain(permission2.permissionId);
@@ -476,7 +477,7 @@ describe('dbPermissions', () => {
 
             // Create a permission document without userId (malformed data)
             const db = admin.firestore();
-            const malformedPermissionRef = db.collection(DataBaseidentifiers.USER_PERMISSION).doc();
+            const malformedPermissionRef = db.collection(DataBaseCollection.USER_PERMISSION).doc();
             await malformedPermissionRef.set({
                 boardId: createdBoardIds[0],
                 permission: Permision.VIEW,
@@ -512,10 +513,10 @@ describe('dbPermissions', () => {
             createdPermissionIds.push(permission.permissionId);
 
             // Verify added
-            let permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission.permissionId).get();
+            let permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission.permissionId).get();
             expect(permissionDoc.data()?.permission).toBe(Permision.VIEW);
 
-            let userDoc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            let userDoc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
             let permissionIds = userDoc.data()?.permissionIds || [];
             expect(permissionIds).toContain(permission.permissionId);
 
@@ -523,22 +524,22 @@ describe('dbPermissions', () => {
             await ChangePermission(permission.permissionId, Permision.EDIT);
 
             // Verify changed
-            permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission.permissionId).get();
+            permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission.permissionId).get();
             expect(permissionDoc.data()?.permission).toBe(Permision.EDIT);
 
             // 3. Remove permission
             await RemovePermission(permission.permissionId);
 
             // Verify removed
-            permissionDoc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission.permissionId).get();
+            permissionDoc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission.permissionId).get();
             expect(permissionDoc.exists).toBe(false);
 
-            userDoc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            userDoc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
             permissionIds = userDoc.data()?.permissionIds || [];
             expect(permissionIds).not.toContain(permission.permissionId);
 
             // Verify permission ID was removed from board's permissions array
-            const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
             const boardPermissions = boardDoc.data()?.permissions || [];
             expect(boardPermissions).not.toContain(permission.permissionId);
         });
@@ -653,7 +654,7 @@ describe('dbPermissions', () => {
             const db = admin.firestore();
             
             // Create a second board
-            const board2Ref = db.collection(DataBaseidentifiers.BOARD).doc();
+            const board2Ref = db.collection(DataBaseCollection.BOARD).doc();
             await board2Ref.set({
                 id: board2Ref.id,
                 owner: sessionToken.UID,
@@ -724,7 +725,7 @@ describe('dbPermissions', () => {
             const db = admin.firestore();
             
             // Create a second board
-            const board2Ref = db.collection(DataBaseidentifiers.BOARD).doc();
+            const board2Ref = db.collection(DataBaseCollection.BOARD).doc();
             await board2Ref.set({
                 id: board2Ref.id,
                 owner: sessionToken.UID,
@@ -763,7 +764,7 @@ describe('dbPermissions', () => {
             const db = admin.firestore();
             
             // Create a second board
-            const board2Ref = db.collection(DataBaseidentifiers.BOARD).doc();
+            const board2Ref = db.collection(DataBaseCollection.BOARD).doc();
             await board2Ref.set({
                 id: board2Ref.id,
                 owner: sessionToken.UID,

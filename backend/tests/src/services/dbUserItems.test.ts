@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
-import { addedUser, addItem, createDefaultRootBoard, removeItem, UpadteBaordItem, getItem, getAllItemsFromBoard, DataBaseidentifiers } from '../../../src/services/dbUserItems.js';
+import { addedUser, addItem, createDefaultRootBoard, removeItem, UpadteBaordItem, getItem, getAllItemsFromBoard } from '../../../src/services/dbUserItems.js';
+import { DataBaseCollection } from '../../../src/datContainers/DataBaseIdentifiers.js';
 import { AdduserPermission, ChangePermission } from '../../../src/services/dbPermissions.js';
 import type { User } from 'firebase/auth';
 import type { Item, Board } from '../../../src/datContainers/dataTypes.js';
@@ -59,7 +60,7 @@ describe('dbUser', () => {
         // Delete user document
         if (sessionToken?.UID) {
             try {
-                await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).delete();
+                await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).delete();
             } catch (error) {
                 // Document might not exist, ignore
             }
@@ -69,13 +70,13 @@ describe('dbUser', () => {
         for (const boardId of createdBoardIds) {
             try {
                 // Delete items subcollection first
-                const itemsRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId).collection(DataBaseidentifiers.ITEMS);
+                const itemsRef = db.collection(DataBaseCollection.BOARD).doc(boardId).collection(DataBaseCollection.ITEMS);
                 const itemsSnapshot = await itemsRef.get();
                 const deletePromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
                 await Promise.all(deletePromises);
 
                 // Delete the board document
-                await db.collection(DataBaseidentifiers.BOARD).doc(boardId).delete();
+                await db.collection(DataBaseCollection.BOARD).doc(boardId).delete();
             } catch (error) {
                 // Document might not exist, ignore
             }
@@ -85,14 +86,14 @@ describe('dbUser', () => {
         // This catches any boards that might not have been tracked in createdBoardIds
         if (sessionToken?.UID) {
             try {
-                const allBoardsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const allBoardsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .where('owner', '==', sessionToken.UID)
                     .get();
                 
                 for (const boardDoc of allBoardsSnapshot.docs) {
                     try {
                         // Delete items subcollection first
-                        const itemsRef = boardDoc.ref.collection(DataBaseidentifiers.ITEMS);
+                        const itemsRef = boardDoc.ref.collection(DataBaseCollection.ITEMS);
                         const itemsSnapshot = await itemsRef.get();
                         const deletePromises = itemsSnapshot.docs.map(doc => doc.ref.delete());
                         await Promise.all(deletePromises);
@@ -111,7 +112,7 @@ describe('dbUser', () => {
         // Delete created permissions
         for (const permissionId of createdPermissionIds) {
             try {
-                await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permissionId).delete();
+                await db.collection(DataBaseCollection.USER_PERMISSION).doc(permissionId).delete();
             } catch (error) {
                 // Document might not exist, ignore
             }
@@ -122,7 +123,7 @@ describe('dbUser', () => {
         if (sessionToken?.UID) {
             try {
                 // Clean up permissions for the main test user
-                const allPermissionsSnapshot = await db.collection(DataBaseidentifiers.USER_PERMISSION)
+                const allPermissionsSnapshot = await db.collection(DataBaseCollection.USER_PERMISSION)
                     .where('userId', '==', sessionToken.UID)
                     .get();
                 
@@ -141,7 +142,7 @@ describe('dbUser', () => {
         // Delete created items (if any were created independently)
         for (const docId of createdDocumentIds) {
             try {
-                await db.collection(DataBaseidentifiers.ITEMS).doc(docId).delete();
+                await db.collection(DataBaseCollection.ITEMS).doc(docId).delete();
             } catch (error) {
                 // Document might not exist, ignore
             }
@@ -198,7 +199,7 @@ describe('dbUser', () => {
 
             // Verify the document was created
             const db = admin.firestore();
-            const doc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            const doc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
 
             expect(doc.exists).toBe(true);
             expect(doc.data()?.isAdmin).toBe(false);
@@ -215,7 +216,7 @@ describe('dbUser', () => {
 
             // Verify the document was created
             const db = admin.firestore();
-            const doc = await db.collection(DataBaseidentifiers.USER).doc(sessionToken.UID).get();
+            const doc = await db.collection(DataBaseCollection.USER).doc(sessionToken.UID).get();
 
             expect(doc.exists).toBe(true);
             expect(doc.data()?.isAdmin).toBe(true);
@@ -241,7 +242,7 @@ describe('dbUser', () => {
 
             // Verify the board was created
             const db = admin.firestore();
-            const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+            const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
 
             expect(boardDoc.exists).toBe(true);
             const boardData = boardDoc.data();
@@ -272,7 +273,7 @@ describe('dbUser', () => {
 
             // Verify only one root board exists
             const db = admin.firestore();
-            const snapshot = await db.collection(DataBaseidentifiers.BOARD)
+            const snapshot = await db.collection(DataBaseCollection.BOARD)
                 .where('owner', '==', sessionToken.UID)
                 .where('isRoot', '==', true)
                 .get();
@@ -292,7 +293,7 @@ describe('dbUser', () => {
                 // First create a root board as parent
                 const rootBoardId = await createDefaultRootBoard(sessionToken);
                 const db = admin.firestore();
-                const rootBoardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(rootBoardId).get();
+                const rootBoardDoc = await db.collection(DataBaseCollection.BOARD).doc(rootBoardId).get();
                 const rootBoardData = rootBoardDoc.data();
                 
                 const parentBoard: Board = {
@@ -321,7 +322,7 @@ describe('dbUser', () => {
                 await addItem(nestedItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the nested board
-                const boardsRef = db.collection(DataBaseidentifiers.BOARD);
+                const boardsRef = db.collection(DataBaseCollection.BOARD);
                 const nestedSnapshot = await boardsRef.where('owner', '==', sessionToken.UID).where('isRoot', '==', false).get();
 
                 expect(nestedSnapshot.size).toBeGreaterThan(0);
@@ -352,7 +353,7 @@ describe('dbUser', () => {
                 // First create a root board as parent
                 const parentBoardId = await createDefaultRootBoard(sessionToken);
                 const db = admin.firestore();
-                const parentBoardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(parentBoardId).get();
+                const parentBoardDoc = await db.collection(DataBaseCollection.BOARD).doc(parentBoardId).get();
                 const parentBoardData = parentBoardDoc.data();
 
                 const parentBoard: Board = {
@@ -382,9 +383,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [5, 5]);
 
                 // Verify the TEXT item was created in the subcollection
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(parentBoardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 expect(itemsSnapshot.size).toBeGreaterThan(0);
@@ -447,7 +448,7 @@ describe('dbUser', () => {
                 // Create a root board as parent
                 const rootBoardId = await createDefaultRootBoard(sessionToken);
                 const db = admin.firestore();
-                const rootBoardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(rootBoardId).get();
+                const rootBoardDoc = await db.collection(DataBaseCollection.BOARD).doc(rootBoardId).get();
                 const rootBoardData = rootBoardDoc.data();
 
                 const parentBoard: Board = {
@@ -477,7 +478,7 @@ describe('dbUser', () => {
                 await addItem(nestedItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the nested board
-                const boardsRef = db.collection(DataBaseidentifiers.BOARD);
+                const boardsRef = db.collection(DataBaseCollection.BOARD);
                 const nestedSnapshot = await boardsRef.where('owner', '==', sessionToken.UID).where('isRoot', '==', false).get();
                 expect(nestedSnapshot.size).toBeGreaterThan(0);
                 const nestedBoardDoc = nestedSnapshot.docs[0];
@@ -499,7 +500,7 @@ describe('dbUser', () => {
                 await removeItem(boardToRemove, sessionToken);
 
                 // Verify the board was deleted
-                const deletedBoardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(nestedBoardId).get();
+                const deletedBoardDoc = await db.collection(DataBaseCollection.BOARD).doc(nestedBoardId).get();
                 expect(deletedBoardDoc.exists).toBe(false);
             });
 
@@ -513,7 +514,7 @@ describe('dbUser', () => {
                 const rootBoardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(rootBoardId);
                 const db = admin.firestore();
-                const rootBoardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(rootBoardId).get();
+                const rootBoardDoc = await db.collection(DataBaseCollection.BOARD).doc(rootBoardId).get();
                 const rootBoardData = rootBoardDoc.data();
 
                 const parentBoard: Board = {
@@ -541,7 +542,7 @@ describe('dbUser', () => {
                 await addItem(nestedItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the nested board
-                const boardsRef = db.collection(DataBaseidentifiers.BOARD);
+                const boardsRef = db.collection(DataBaseCollection.BOARD);
                 const nestedSnapshot = await boardsRef.where('owner', '==', sessionToken.UID).where('isRoot', '==', false).get();
                 const nestedBoardDoc = nestedSnapshot.docs[0];
                 if (!nestedBoardDoc) {
@@ -571,7 +572,7 @@ describe('dbUser', () => {
                 createdPermissionIds.push(permission1.permissionId, permission2.permissionId);
 
                 // Verify permissions exist
-                let boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(nestedBoardId).get();
+                let boardDoc = await db.collection(DataBaseCollection.BOARD).doc(nestedBoardId).get();
                 let boardPermissions = boardDoc.data()?.permissions || [];
                 expect(boardPermissions.length).toBeGreaterThan(0);
                 expect(boardPermissions).toContain(permission1.permissionId);
@@ -589,12 +590,12 @@ describe('dbUser', () => {
                 await removeItem(boardToRemove, sessionToken);
 
                 // Verify the board was deleted
-                const deletedBoardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(nestedBoardId).get();
+                const deletedBoardDoc = await db.collection(DataBaseCollection.BOARD).doc(nestedBoardId).get();
                 expect(deletedBoardDoc.exists).toBe(false);
 
                 // Verify permissions were deleted
-                const permission1Doc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission1.permissionId).get();
-                const permission2Doc = await db.collection(DataBaseidentifiers.USER_PERMISSION).doc(permission2.permissionId).get();
+                const permission1Doc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission1.permissionId).get();
+                const permission2Doc = await db.collection(DataBaseCollection.USER_PERMISSION).doc(permission2.permissionId).get();
                 expect(permission1Doc.exists).toBe(false);
                 expect(permission2Doc.exists).toBe(false);
 
@@ -627,7 +628,7 @@ describe('dbUser', () => {
 
                 // Verify the board still exists
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(rootBoardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(rootBoardId).get();
                 expect(boardDoc.exists).toBe(true);
             });
 
@@ -683,7 +684,7 @@ describe('dbUser', () => {
                 // Create a root board as parent
                 const parentBoardId = await createDefaultRootBoard(sessionToken);
                 const db = admin.firestore();
-                const parentBoardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(parentBoardId).get();
+                const parentBoardDoc = await db.collection(DataBaseCollection.BOARD).doc(parentBoardId).get();
                 const parentBoardData = parentBoardDoc.data();
 
                 const parentBoard: Board = {
@@ -713,9 +714,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [5, 5]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(parentBoardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 expect(itemsSnapshot.size).toBeGreaterThan(0);
@@ -738,9 +739,9 @@ describe('dbUser', () => {
                 await removeItem(itemToRemove, sessionToken, parentBoard);
 
                 // Verify the item was deleted
-                const deletedItemDoc = await db.collection(DataBaseidentifiers.BOARD)
+                const deletedItemDoc = await db.collection(DataBaseCollection.BOARD)
                     .doc(parentBoardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .doc(itemId)
                     .get();
 
@@ -793,7 +794,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -821,9 +822,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 expect(itemsSnapshot.size).toBeGreaterThan(0);
@@ -838,9 +839,9 @@ describe('dbUser', () => {
                 });
 
                 // Verify the item was updated
-                const updatedItemDoc = await db.collection(DataBaseidentifiers.BOARD)
+                const updatedItemDoc = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .doc(itemId)
                     .get();
 
@@ -861,7 +862,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -889,9 +890,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 const itemDoc = itemsSnapshot.docs[0];
@@ -903,9 +904,9 @@ describe('dbUser', () => {
                 });
 
                 // Verify only content was updated, other fields remain unchanged
-                const updatedItemDoc = await db.collection(DataBaseidentifiers.BOARD)
+                const updatedItemDoc = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .doc(itemId)
                     .get();
 
@@ -928,7 +929,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -956,9 +957,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 const itemDoc = itemsSnapshot.docs[0];
@@ -990,9 +991,9 @@ describe('dbUser', () => {
                 });
 
                 // Verify the item was updated
-                const updatedItemDoc = await db.collection(DataBaseidentifiers.BOARD)
+                const updatedItemDoc = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .doc(itemId)
                     .get();
 
@@ -1015,7 +1016,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -1043,9 +1044,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 const itemDoc = itemsSnapshot.docs[0];
@@ -1086,7 +1087,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -1114,9 +1115,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 const itemDoc = itemsSnapshot.docs[0];
@@ -1195,7 +1196,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -1223,9 +1224,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 const itemDoc = itemsSnapshot.docs[0];
@@ -1251,7 +1252,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -1403,7 +1404,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -1431,9 +1432,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [15, 15]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 expect(itemsSnapshot.size).toBeGreaterThan(0);
@@ -1503,7 +1504,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -1530,9 +1531,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 const itemDoc = itemsSnapshot.docs[0];
@@ -1571,7 +1572,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -1599,9 +1600,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 const itemDoc = itemsSnapshot.docs[0];
@@ -1623,7 +1624,7 @@ describe('dbUser', () => {
                 const boardId = await createDefaultRootBoard(sessionToken);
                 createdBoardIds.push(boardId);
                 const db = admin.firestore();
-                const boardDoc = await db.collection(DataBaseidentifiers.BOARD).doc(boardId).get();
+                const boardDoc = await db.collection(DataBaseCollection.BOARD).doc(boardId).get();
                 const boardData = boardDoc.data();
 
                 const parentBoard: Board = {
@@ -1650,9 +1651,9 @@ describe('dbUser', () => {
                 await addItem(textItem, sessionToken, parentBoard, [10, 10]);
 
                 // Find the created item
-                const itemsSnapshot = await db.collection(DataBaseidentifiers.BOARD)
+                const itemsSnapshot = await db.collection(DataBaseCollection.BOARD)
                     .doc(boardId)
-                    .collection(DataBaseidentifiers.ITEMS)
+                    .collection(DataBaseCollection.ITEMS)
                     .get();
 
                 const itemDoc = itemsSnapshot.docs[0];
@@ -1705,7 +1706,7 @@ describe('dbUser', () => {
 
             // Add multiple items to the board
             const db = admin.firestore();
-            const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+            const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
             const boardDoc = await boardRef.get();
             const boardData = boardDoc.data();
 
@@ -1786,7 +1787,7 @@ describe('dbUser', () => {
 
             // Add an item to the board
             const db = admin.firestore();
-            const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+            const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
             const boardDoc = await boardRef.get();
             const boardData = boardDoc.data();
 
@@ -1878,7 +1879,7 @@ describe('dbUser', () => {
 
             // Delete the board document but keep the reference
             const db = admin.firestore();
-            await db.collection(DataBaseidentifiers.BOARD).doc(boardId).delete();
+            await db.collection(DataBaseCollection.BOARD).doc(boardId).delete();
 
             // Now try to get items - should fail with "Board not found"
             await expect(
@@ -1957,7 +1958,7 @@ describe('dbUser', () => {
             createdBoardIds.push(boardId);
 
             const db = admin.firestore();
-            const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+            const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
             const boardDoc = await boardRef.get();
             const boardData = boardDoc.data();
 
@@ -2013,7 +2014,7 @@ describe('dbUser', () => {
 
             // Add an item
             const db = admin.firestore();
-            const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+            const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
             const boardDoc = await boardRef.get();
             const boardData = boardDoc.data();
 
@@ -2090,7 +2091,7 @@ describe('dbUser', () => {
 
             // Add an item
             const db = admin.firestore();
-            const boardRef = db.collection(DataBaseidentifiers.BOARD).doc(boardId);
+            const boardRef = db.collection(DataBaseCollection.BOARD).doc(boardId);
             const boardDoc = await boardRef.get();
             const boardData = boardDoc.data();
 

@@ -3,7 +3,7 @@ import cors from "cors";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import fireAuthRoutes from "./routes/admin/fireAuthRoutes.js";
+import fireAuthRoutes from "./routes/fireAuthRoutes.js";
 import userItemRoutes from "./routes/UserItemRoutes.js";
 import permissionRoutes from "./routes/PermissionRoutes.js";
 import boardRoutes from "./routes/boardRoutes.js";

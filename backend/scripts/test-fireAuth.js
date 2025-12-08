@@ -1,6 +1,6 @@
-import { createAccount, loginUser, logoutUser, verifyUserToken } from './dist/services/fireAuth.js';
+import { createAccount, loginUser, logoutUser, verifyUserToken } from '../dist/services/fireAuth.js';
 // Import Firebase initialization
-import { auth } from './dist/services/firebase.js';
+import { auth } from '../dist/services/firebase.js';
 
 async function testFireAuth() {
   try {
